@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Protocol: ASSIA-26</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Great+Vibes&family=Poppins:wght@300;500;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* -----------------------------------------------------------
+           CORE & ANIMATED BACKGROUND (ORIGINAL PRESERVED)
+           ----------------------------------------------------------- */
+        :root {
+            --accent-gold: #ffd700;
+            --neon-pink: #ff2a6d;
+            --neon-blue: #05d9e8;
+            --font-main: 'Poppins', sans-serif;
+            --font-fun: 'Fredoka', sans-serif;
+            --font-fancy: 'Great Vibes', cursive;
+            --cake-purple: #6a1b9a;
+            --icing-pink: #f3e5f5;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-drag: none; cursor: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab, #2e003e);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #fff;
+            font-family: var(--font-main);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            touch-action: none;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* -----------------------------------------------------------
+           CUSTOM CURSORS
+           ----------------------------------------------------------- */
+        .cursor-dot {
+            width: 12px; height: 12px; background: #fff;
+            position: fixed; border-radius: 50%; z-index: 9999; pointer-events: none;
+            box-shadow: 0 0 10px #fff; mix-blend-mode: overlay;
+        }
+        .cursor-coin {
+            width: 60px; height: 60px; 
+            background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
+            border: 2px solid #fff;
+            position: fixed; border-radius: 50%; z-index: 9999; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; color: #fff; font-weight: bold;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            transform: translate(-50%, -50%) scale(0);
+        }
+        .cursor-coin::after { content: '$'; }
+
+        /* SCENE 1: THE VAULT */
+        .vault-overlay { position: fixed; inset: 0; z-index: 100; display: flex; pointer-events: none; }
+        .vault-door, .vault-lock-container { pointer-events: auto; }
+        .vault-door {
+            width: 50%; height: 100%; background: #111; position: relative;
+            box-shadow: inset 0 0 50px #000; border-right: 2px solid #333;
+            transition: transform 2s cubic-bezier(0.6, 0.05, 0.2, 0.99); z-index: 100;
+            background-image: radial-gradient(#333 1px, transparent 1px); background-size: 20px 20px;
+        }
+        .vault-door.left { border-right: 5px solid #222; }
+        .vault-door.right { border-left: 5px solid #222; }
+        .vault-open .vault-door.left { transform: translateX(-100%); }
+        .vault-open .vault-door.right { transform: translateX(100%); }
+        .vault-lock-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 102; display: flex; flex-direction: column; align-items: center;
+            transition: opacity 0.5s; width: 100%;
+        }
+        .vault-open .vault-lock-container { opacity: 0; pointer-events: none; }
+        .scan-msg { font-family: var(--font-main); font-weight: 800; margin-bottom: 20px; letter-spacing: 1px; color: #fff; text-shadow: 0 0 20px rgba(0,0,0,0.8); text-align: center; width: 100%; min-height: 30px; }
+        .charge-container { width: 150px; height: 150px; border-radius: 50%; border: 4px solid #444; background: #000; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+        .charge-fill { position: absolute; inset: 0; background: var(--neon-blue); transform: scale(0); border-radius: 50%; opacity: 0.9; transition: background 0.3s; }
+        .fingerprint-icon { font-size: 3.5rem; z-index: 2; color: #666; transition: 0.3s; pointer-events: none; }
+        .shake-element { animation: shake 0.4s; }
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-10px);} 75% {transform: translateX(10px);} }
+
+        /* WELCOME ANIMATION */
+        .welcome-overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; pointer-events: none; opacity: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); }
+        .welcome-overlay.visible { opacity: 1; }
+        .welcome-text-container { font-family: var(--font-fancy); font-size: 5rem; color: #fff; text-align: center; line-height: 1.2; text-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 10px; }
+        .char { display: inline-block; opacity: 0; transform-origin: 50% 100%; }
+        .char.highlight { color: var(--accent-gold); text-shadow: 0 0 30px var(--accent-gold); }
+        #pre-game-msg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); opacity: 0; pointer-events: none; flex-direction: column; text-align: center; }
+        .pg-text { font-family: var(--font-fun); font-size: 3rem; color: var(--neon-blue); margin-bottom: 20px; transform: scale(0.8); }
+
+        /* SCENES GENERAL */
+        .scene { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.8s ease; z-index: 10; }
+        .scene.active { opacity: 1; pointer-events: all; }
+
+        /* SCENE 2: BALLOONS */
+        .hud { position: fixed; top: 20px; width: 95%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.1); padding: 10px 25px; border-radius: 50px; border: 2px solid #fff; backdrop-filter: blur(10px); font-family: var(--font-fun); font-weight: bold; font-size: 1.2rem; box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 20; }
+        .balloon { position: absolute; width: 70px; height: 85px; border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-family: var(--font-fun); font-size: 1.5rem; box-shadow: inset -10px -10px 20px rgba(0,0,0,0.1), inset 10px 10px 20px rgba(255,255,255,0.4); }
+        .balloon::after { content: ''; position: absolute; bottom: -60px; left: 50%; width: 2px; height: 50px; background: rgba(255,255,255,0.6); transform: translateX(-50%); }
+        .bomb-container { position: absolute; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+        .bomb-body { width: 60px; height: 60px; background: radial-gradient(circle at 30% 30%, #444, #000); border-radius: 50%; position: relative; z-index: 2; box-shadow: 0 0 15px #ff0000; animation: pulseRed 0.5s infinite alternate; display: flex; align-items: center; justify-content: center; font-size: 2rem; }
+        .spike { position: absolute; width: 10px; height: 80px; background: #222; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1; border-radius: 2px; }
+        .spike:nth-child(2) { transform: translate(-50%, -50%) rotate(45deg); }
+        .spike:nth-child(3) { transform: translate(-50%, -50%) rotate(90deg); }
+        .spike:nth-child(4) { transform: translate(-50%, -50%) rotate(135deg); }
+        #game-over-screen { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: 0.3s; }
+        #game-over-screen.visible { opacity: 1; pointer-events: all; }
+        .crying-img { width: 200px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.2)); animation: sadFloat 3s infinite ease-in-out; }
+
+        /* SCENE 3: SCRATCH */
+        .scratch-area { position: relative; width: 320px; height: 420px; }
+        .scratch-card { width: 100%; height: 100%; background: #fff; border-radius: 15px; overflow: hidden; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .secret-msg { position: absolute; inset: 0; padding: 30px; background: #ffe6f2; color: #333; text-align: left; z-index: 1; display: flex; flex-direction: column; justify-content: center; }
+        #scratch-c { position: absolute; top: 0; left: 0; z-index: 10; touch-action: none; }
+        .chest-box { position: absolute; bottom: -60px; right: -30px; font-size: 4rem; color: var(--accent-gold); filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3)); animation: bounce 2s infinite; z-index: 20; }
+        .puzzle-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .puzzle-overlay.visible { opacity: 1; pointer-events: all; }
+        .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+        .p-tile { width: 70px; height: 70px; background: rgba(255,255,255,0.1); border-radius: 12px; border: 2px solid rgba(255,255,255,0.2); transition: 0.2s; }
+        .p-tile.lit { background: var(--neon-blue); box-shadow: 0 0 30px var(--neon-blue); border-color: #fff; }
+
+        /* SCENE 4: CAKE & FAN */
+        .cake-wrapper { position: relative; margin-top: 30px; transform: scale(0.9); }
+        .cake-container { position: relative; width: 320px; height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+        .cake-tier { position: relative; width: 200px; height: 80px; background: var(--cake-purple); border-radius: 15px 15px 5px 5px; margin-bottom: -5px; box-shadow: inset 0 -10px 15px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.1); }
+        .cake-tier.bottom { width: 280px; height: 100px; }
+        .cake-tier.middle { width: 230px; height: 90px; }
+        .icing-main { position: absolute; top: 0; width: 100%; height: 30px; background: var(--icing-pink); border-radius: 15px 15px 10px 10px; z-index: 2; }
+        .drip { width: 15px; height: 25px; background: var(--icing-pink); border-radius: 0 0 15px 15px; margin-top: 20px; z-index: 1; }
+        .sprinkles { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, #ff0 1.5px, transparent 1.5px), radial-gradient(circle, #0ff 1.5px, transparent 1.5px); background-size: 20px 20px; opacity: 0.6; }
+        .candles-row { position: absolute; top: -45px; width: 80%; display: flex; justify-content: space-between; z-index: 10; }
+        .candle-unit { position: relative; width: 12px; height: 50px; background: linear-gradient(to right, #fff, #eee, #fff); border-radius: 3px; }
+        .flame { width: 18px; height: 28px; background: radial-gradient(circle at 50% 100%, #fff, #ffdf00, #ff9d00, #ff5e00); border-radius: 50% 50% 20% 20%; position: absolute; top: -25px; left: 50%; transform: translateX(-50%); animation: flickerAnim 0.1s infinite alternate; box-shadow: 0 0 15px #ff9d00; transition: 0.1s; }
+        @keyframes flickerAnim { 0% { transform: translateX(-50%) scale(1); } 100% { transform: translateX(-50%) scale(1.1); } }
+        #fan-object { position: absolute; bottom: 30px; font-size: 4rem; cursor: pointer; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3)); transition: 0.3s; z-index: 100; }
+        .fan-held { transform: scale(1.2) translateY(-20px); }
+        
+        /* Pick me Text Styling */
+        .pick-me-text {
+            position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%);
+            font-family: var(--font-main); font-size: 0.9rem; color: #fff;
+            white-space: nowrap; pointer-events: none; font-weight: 600;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5); animation: pulseText 1.5s infinite;
+        }
+        @keyframes pulseText { 0%, 100% {opacity: 0.5; transform: translateX(-50%) scale(0.9);} 50% {opacity: 1; transform: translateX(-50%) scale(1.1);} }
+
+        .wave-controls { position: fixed; bottom: 40px; width: 100%; display: none; justify-content: center; gap: 40px; z-index: 200; }
+        .wave-btn { width: 80px; height: 80px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--neon-pink); border: 4px solid var(--neon-pink); box-shadow: 0 5px 15px rgba(0,0,0,0.2); pointer-events: auto; }
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--neon-pink); color: #fff; padding: 15px 30px; border-radius: 50px; font-weight: bold; opacity: 0; transition: 0.3s; z-index: 300; }
+        .toast.show { opacity: 1; bottom: 100px; }
+    </style>
+</head>
+<body>
+
+    <!-- SOUNDS -->
+    <audio id="bg-music" loop preload="auto"><source src="https://cdn.pixabay.com/audio/2024/07/23/audio_82c5f11666.mp3" type="audio/mpeg"></audio>
+    <audio id="sfx-pop" src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3"></audio>
+    <audio id="sfx-beep" src="https://cdn.pixabay.com/download/audio/2022/03/24/audio_078693c06e.mp3"></audio>
+    <audio id="sfx-win" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c153e2.mp3"></audio>
+    <audio id="sfx-vault" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_730626c99c.mp3"></audio>
+
+    <div class="cursor-dot"></div>
+    <div class="cursor-coin" id="coin-cursor"></div>
+    <div class="toast" id="toast-msg"></div>
+
+    <!-- SCENE 1 -->
+    <div class="vault-overlay" id="vault-overlay">
+        <div class="vault-door left"></div><div class="vault-door right"></div>
+        <div class="vault-lock-container">
+            <h2 class="scan-msg" id="scan-text">Security Check</h2>
+            <div class="charge-container" id="fp-btn"><div class="charge-fill"></div><i class="fa-solid fa-fingerprint fingerprint-icon"></i></div>
+            <p style="margin-top: 20px; color: #ccc; font-family: var(--font-main);">Hold to Scan</p>
+        </div>
+    </div>
+
+    <!-- WELCOME -->
+    <div class="welcome-overlay" id="welcome-screen"><div class="welcome-text-container" id="welcome-text"></div></div>
+    <div id="pre-game-msg"><h1 class="pg-text">It is your 26th birthday...</h1><h1 class="pg-text" style="color: var(--accent-gold); font-size: 2rem;">You know what to do.</h1></div>
+
+    <!-- SCENE 2 -->
+    <section id="scene-2" class="scene">
+        <div class="hud"><span id="lives-disp" style="color: var(--neon-pink);">❤️❤️❤️</span><span id="score-disp" style="color: var(--accent-gold);">0 / 26</span></div>
+        <div id="game-area" style="position: absolute; inset: 0; overflow: hidden;"></div>
+        <div id="game-over-screen">
+            <img src="https://cdn-icons-png.flaticon.com/512/4080/4080536.png" class="crying-img" alt="Crying">
+            <h2 style="font-family: var(--font-fun); color: #fff; margin-bottom: 20px;">Oh no! Too many bombs.</h2>
+            <button class="btn-modern" style="padding: 10px 30px; background:#fff; border-radius:20px; color:#ff1493; border:none; font-weight:bold; cursor:none;" onclick="restartGame()">Try Again</button>
+        </div>
+    </section>
+
+    <!-- SCENE 3 -->
+    <section id="scene-3" class="scene">
+        <h2 style="font-family: var(--font-fancy); font-size: 2.5rem; margin-bottom: 20px;">The Hidden Treasury</h2>
+        <div class="scratch-area">
+            <div class="scratch-card">
+                <div class="secret-msg">
+                    <h3 style="font-family: var(--font-fancy); font-size: 2.2rem; color: #ff1493; margin-bottom: 10px;">Happy 26th Birthday!</h3>
+                    <p style="font-family: var(--font-main); color: #333; line-height: 1.5; font-size: 0.95rem; font-weight: 500;">
+                        My Dearest Assia,<br><br>Another year, another level unlocked. Just like that puzzle, you have a brilliant mind that solves everything.<br><br>Wishing you a year as beautiful, fun, and magical as you are.<br>
+                        <strong style="color:#000; font-weight:800; display:block; margin-top:10px;">Forever Your Fan.</strong>
+                    </p>
+                </div>
+                <canvas id="scratch-c"></canvas>
+            </div>
+            <div class="chest-box" id="chest-btn"><i class="fa-solid fa-gift"></i></div>
+        </div>
+        <button id="btn-final" style="padding: 15px 40px; background: #fff; color: var(--neon-pink); border: none; border-radius: 50px; font-weight: bold; opacity: 0; pointer-events: none; margin-top: 40px; font-family: var(--font-fun); font-size:1.2rem;">Proceed to Ceremony</button>
+    </section>
+
+    <!-- PUZZLE MODAL -->
+    <div class="puzzle-overlay" id="puzzle-overlay">
+        <h2 style="font-family: var(--font-fun); color: #fff;">Memory Matrix</h2>
+        <div class="grid-3x3" id="puzzle-grid">
+            <div class="p-tile" data-i="0"></div><div class="p-tile" data-i="1"></div><div class="p-tile" data-i="2"></div>
+            <div class="p-tile" data-i="3"></div><div class="p-tile" data-i="4"></div><div class="p-tile" data-i="5"></div>
+            <div class="p-tile" data-i="6"></div><div class="p-tile" data-i="7"></div><div class="p-tile" data-i="8"></div>
+        </div>
+        <p id="puzzle-status" style="margin-top: 20px; font-weight: bold; color: #fff;"></p>
+    </div>
+
+    <!-- SCENE 4 -->
+    <section id="scene-4" class="scene">
+        <h1 id="cake-title" style="font-family: var(--font-fancy); font-size: 3.5rem; text-shadow: 0 0 20px rgba(0,0,0,0.5); text-align: center; max-width: 90%;">Make a Wish, Assia</h1>
+        <div class="cake-wrapper">
+            <div class="cake-container">
+                <div class="cake-tier top">
+                    <div class="icing-main"></div>
+                    <div class="icing-drip-container"><div class="drip"></div><div class="drip"></div><div class="drip"></div><div class="drip"></div></div>
+                    <div class="sprinkles"></div>
+                    <div class="candles-row">
+                        <div class="candle-unit"><div class="flame"></div></div>
+                        <div class="candle-unit"><div class="flame"></div></div>
+                        <div class="candle-unit"><div class="flame"></div></div>
+                        <div class="candle-unit"><div class="flame"></div></div>
+                        <div class="candle-unit"><div class="flame"></div></div>
+                    </div>
+                </div>
+                <div class="cake-tier middle"><div class="icing-main"></div><div class="icing-drip-container"><div class="drip"></div><div class="drip"></div></div><div class="sprinkles"></div></div>
+                <div class="cake-tier bottom"><div class="icing-main"></div><div class="icing-drip-container"><div class="drip"></div><div class="drip"></div></div><div class="sprinkles"></div></div>
+            </div>
+        </div>
+        <div id="fan-object">🪭<div class="pick-me-text" id="fan-hint">Pick me</div></div>
+        <div class="wave-controls" id="wave-ctrls">
+            <div class="wave-btn" id="btn-left">⬅️</div>
+            <div class="wave-btn" id="btn-right">➡️</div>
+        </div>
+    </section>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        const cursorDot = document.querySelector('.cursor-dot');
+        const coinCursor = document.getElementById('coin-cursor');
+        const bgMusic = document.getElementById('bg-music');
+        let hasCoin = false;
+
+        const updateCursor = (e) => {
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            gsap.to(cursorDot, { x: x, y: y, duration: 0.1 });
+            if(hasCoin) gsap.to(coinCursor, { x: x, y: y, duration: 0.15 });
+        };
+        window.addEventListener('mousemove', updateCursor);
+        window.addEventListener('touchmove', updateCursor, {passive: false});
+
+        function showToast(msg) {
+            const t = document.getElementById('toast-msg');
+            t.innerText = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function switchScene(s1, s2) {
+            const el1 = document.getElementById(s1);
+            const el2 = document.getElementById(s2);
+            gsap.to(el1, {opacity:0, scale:0.9, duration:0.6, onComplete:()=>{
+                el1.classList.remove('active');
+                el2.classList.add('active');
+                gsap.fromTo(el2, {opacity:0, scale:1.1}, {opacity:1, scale:1, duration:0.6});
+            }});
+        }
+
+        /* SCENE 1 */
+        const fpBtn = document.getElementById('fp-btn');
+        const fpFill = document.querySelector('.charge-fill');
+        const scanText = document.getElementById('scan-text');
+        let isLocked = false, canRetry = false, charge = 0, interval = null;
+
+        const startScan = (e) => {
+            // UNLOCK AUDIO SYSTEM (Essential for Browsers)
+            bgMusic.play().then(() => bgMusic.pause()).catch(() => {});
+            
+            if(isLocked) {
+                fpBtn.classList.add('shake-element');
+                document.getElementById('sfx-beep').play().catch(()=>{});
+                scanText.innerText = "Don't be stubborn, Clean Your fingers";
+                setTimeout(() => fpBtn.classList.remove('shake-element'), 500);
+                return; 
+            }
+            if(interval) clearInterval(interval);
+            interval = setInterval(() => {
+                if(charge < 100) { charge += 4; fpFill.style.transform = `scale(${charge/100})`; } 
+                else { processScanResult(); }
+            }, 30);
+        };
+        const stopScan = () => { if(interval) clearInterval(interval); charge = 0; fpFill.style.transform = `scale(0)`; };
+        function processScanResult() {
+            clearInterval(interval);
+            if (!canRetry) {
+                document.getElementById('sfx-beep').play();
+                fpBtn.classList.add('shake-element');
+                fpFill.style.background = 'var(--neon-pink)';
+                scanText.innerText = "Please Wipe Your Fingers and try again";
+                isLocked = true;
+                setTimeout(() => { isLocked = false; canRetry = true; scanText.innerText = "Ready. Scan Identity."; }, 6000); 
+            } else {
+                document.getElementById('sfx-win').play();
+                fpFill.style.background = 'var(--accent-gold)';
+                scanText.innerText = "Identity Confirmed";
+                setTimeout(openVault, 1000);
+            }
+        }
+        function openVault() {
+            document.getElementById('sfx-vault').play();
+            // START MUSIC HERE
+            bgMusic.play().catch(e => console.log("Audio play failed", e));
+            document.getElementById('vault-overlay').classList.add('vault-open');
+            playWelcomeAnimation();
+        }
+        function playWelcomeAnimation() {
+            const container = document.getElementById('welcome-text');
+            const screen = document.getElementById('welcome-screen');
+            screen.classList.add('visible');
+            container.innerHTML = `<div><span class="char">W</span><span class="char">e</span><span class="char">l</span><span class="char">c</span><span class="char">o</span><span class="char">m</span><span class="char">e</span></div><div style="margin-top:10px;"><span class="char">M</span><span class="char">i</span><span class="char">s</span><span class="char">s</span>&nbsp;<span class="char">A</span><span class="char">s</span><span class="char">s</span><span class="char">i</span><span class="char">a</span>&nbsp;<span class="char">A</span><span class="char">h</span><span class="char">e</span><span class="char">r</span><span class="char">t</span><span class="char">i</span></div>`;
+            const chars = document.querySelectorAll('.char');
+            gsap.fromTo(chars, { opacity: 0, scale: 0, y: 100 }, { 
+                opacity: 1, scale: 1, y: 0, stagger: 0.05, duration: 1.2, ease: "elastic.out(1, 0.5)",
+                onComplete: () => {
+                    chars.forEach((c, i) => { if(i > 6) c.classList.add('highlight'); });
+                    setTimeout(() => { gsap.to(screen, {opacity: 0, duration: 1}); gsap.to('#vault-overlay', {opacity: 0, duration: 1, pointerEvents:'none'}); showPreGameMsg(); }, 3500);
+                }
+            });
+        }
+        function showPreGameMsg() {
+            const pgMsg = document.getElementById('pre-game-msg');
+            gsap.to(pgMsg, {opacity: 1, duration: 1});
+            setTimeout(() => { gsap.to(pgMsg, {opacity: 0, duration: 1, pointerEvents: 'none'}); document.getElementById('scene-2').classList.add('active'); startBalloons(); }, 4000);
+        }
+
+        /* SCENE 2 */
+        let score = 0, target = 26, lives = 3, spawnInterval, gameActive = false, attemptCount = 0;
+        const gameArea = document.getElementById('game-area');
+        gameArea.addEventListener('pointerdown', () => { if (!gameActive) return; lives--; updateLives(); document.getElementById('sfx-beep').play(); if(lives <= 0) gameOver(); });
+        function startBalloons() { gameActive = true; let rate = attemptCount === 0 ? 300 : 800; spawnInterval = setInterval(() => { if(score >= target || !gameActive) { clearInterval(spawnInterval); return; } spawnBalloon(); }, rate); }
+        function updateLives() { let hearts = ""; for(let i=0; i<3; i++) hearts += i < lives ? "❤️" : "🤍"; document.getElementById('lives-disp').innerText = hearts; }
+        function spawnBalloon() {
+            const isBomb = Math.random() < 0.15;
+            const el = document.createElement('div');
+            el.className = isBomb ? 'bomb-container' : 'balloon';
+            if(isBomb) el.innerHTML = `<div class="spike"></div><div class="bomb-body">☠️</div>`;
+            else { const hue = Math.random() * 360; el.style.backgroundColor = `hsl(${hue}, 80%, 60%)`; el.innerText = Math.floor(Math.random()*26)+1; }
+            el.style.left = `${Math.random() * (window.innerWidth - 80)}px`;
+            el.style.bottom = '-100px';
+            gameArea.appendChild(el);
+            gsap.to(el, { bottom: window.innerHeight + 100, duration: Math.random()*2+3, ease: 'none', onComplete: () => el.remove() });
+            el.addEventListener('pointerdown', (e) => { e.stopPropagation(); if(isBomb) { lives--; updateLives(); if(lives <= 0) gameOver(); } else { score++; document.getElementById('sfx-pop').play(); document.getElementById('score-disp').innerText = `${score} / ${target}`; if(score >= target) gameWin(); } el.remove(); });
+        }
+        function gameOver() { gameActive = false; clearInterval(spawnInterval); document.getElementById('game-over-screen').classList.add('visible'); }
+        window.restartGame = () => { attemptCount++; score = 0; lives = 3; updateLives(); document.getElementById('game-over-screen').classList.remove('visible'); gameArea.innerHTML = ''; startBalloons(); };
+        function gameWin() { gameActive = false; clearInterval(spawnInterval); document.getElementById('sfx-win').play(); triggerFireworks(); setTimeout(() => switchScene('scene-2', 'scene-3'), 3000); }
+        function triggerFireworks() { let end = Date.now() + 3000; (function frame() { confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 } }); confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 } }); if (Date.now() < end) requestAnimationFrame(frame); }()); }
+
+        /* SCENE 3 */
+        const chestBtn = document.getElementById('chest-btn');
+        const puzzleOverlay = document.getElementById('puzzle-overlay');
+        const cvs = document.getElementById('scratch-c');
+        const ctx = cvs.getContext('2d');
+        
+        let sequence = [];
+        let playerSeq = [];
+        let isPlayingSequence = false;
+        let puzzleInterval = null;
+
+        function setupScratchCanvas() { cvs.width = 320; cvs.height = 420; ctx.fillStyle = '#C0C0C0'; ctx.fillRect(0, 0, 320, 420); ctx.font = 'bold 22px Poppins'; ctx.fillStyle = '#666'; ctx.textAlign = 'center'; ctx.fillText("LOCKED", 160, 200); ctx.font = '14px Poppins'; ctx.fillText("(Unlock the Gift for a coin)", 160, 230); }
+        chestBtn.addEventListener('click', () => { if(hasCoin) return; puzzleOverlay.classList.add('visible'); startPuzzle(); });
+        
+        function startPuzzle() {
+            if(puzzleInterval) clearInterval(puzzleInterval);
+            sequence = [];
+            playerSeq = [];
+            isPlayingSequence = true; 
+
+            for(let i=0; i<4; i++) sequence.push(Math.floor(Math.random()*9));
+            
+            const statusText = document.getElementById('puzzle-status');
+            statusText.innerText = "Memorize...";
+            
+            let count = 0;
+            puzzleInterval = setInterval(() => { 
+                if(count >= 4) { 
+                    clearInterval(puzzleInterval); 
+                    statusText.innerText = "Repeat!"; 
+                    isPlayingSequence = false; 
+                    return; 
+                } 
+                let t = document.querySelector(`.p-tile[data-i="${sequence[count]}"]`); 
+                t.classList.add('lit'); 
+                document.getElementById('sfx-pop').play(); 
+                setTimeout(() => t.classList.remove('lit'), 400); 
+                count++; 
+            }, 700);
+
+            document.querySelectorAll('.p-tile').forEach(t => { 
+                t.onpointerdown = () => { 
+                    if(isPlayingSequence) return; 
+
+                    let idx = parseInt(t.dataset.i); 
+                    t.classList.add('lit'); 
+                    setTimeout(() => t.classList.remove('lit'), 200); 
+                    playerSeq.push(idx); 
+                    
+                    if(playerSeq[playerSeq.length-1] !== sequence[playerSeq.length-1]) { 
+                        document.getElementById('sfx-beep').play(); 
+                        statusText.innerText = "Wrong! Starting Over...";
+                        setTimeout(startPuzzle, 1000); 
+                        return; 
+                    } 
+                    
+                    if(playerSeq.length === 4) { 
+                        document.getElementById('sfx-win').play(); 
+                        hasCoin = true; 
+                        puzzleOverlay.classList.remove('visible'); 
+                        gsap.to(coinCursor, {scale:1}); 
+                        gsap.to(chestBtn, {scale:0, opacity:0}); 
+                        showToast("Coin Acquired! Now scratch the card!"); 
+                    } 
+                }; 
+            });
+        }
+
+        let isDrawing = false;
+        const scratchAction = (e) => { if(!isDrawing || !hasCoin) return; const rect = cvs.getBoundingClientRect(); const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left; const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top; ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath(); ctx.arc(x, y, 25, 0, Math.PI * 2); ctx.fill(); const pixels = ctx.getImageData(0, 0, 320, 420).data; let count = 0; for (let i = 3; i < pixels.length; i += 4) if (pixels[i] === 0) count++; if (count > (pixels.length / 4) * 0.5) { gsap.to(cvs, { opacity: 0, duration: 1, pointerEvents: 'none' }); gsap.to('#btn-final', { opacity: 1, pointerEvents: 'all' }); hasCoin = false; gsap.to(coinCursor, { scale: 0, duration: 0.5 }); } };
+        cvs.addEventListener('pointerdown', (e) => { isDrawing = true; scratchAction(e); });
+        window.addEventListener('pointerup', () => isDrawing = false);
+        cvs.addEventListener('pointermove', scratchAction);
+        setupScratchCanvas();
+        document.getElementById('btn-final').onclick = () => switchScene('scene-3', 'scene-4');
+
+        /* SCENE 4 */
+        let fanHeld = false;
+        let blowVelocity = 0;
+        let flamesOut = false;
+        const fanObj = document.getElementById('fan-object');
+        const waveCtrls = document.getElementById('wave-ctrls');
+        const allFlames = document.querySelectorAll('.flame');
+
+        fanObj.addEventListener('pointerdown', () => {
+            if(fanHeld) return;
+            fanHeld = true;
+            document.getElementById('fan-hint').style.display = 'none'; 
+            fanObj.classList.add('fan-held');
+            gsap.to(fanObj, { x: 0, y: -100, duration: 0.5, ease: "power2.out" });
+            waveCtrls.style.display = 'flex';
+            showToast("Click buttons to blow out candles!");
+            startVelocityLogic();
+        });
+
+        function handleWaving(side) {
+            if(!fanHeld || flamesOut) return;
+            blowVelocity += 1.2; 
+            if(blowVelocity > 10) blowVelocity = 10; 
+            if(side === 'left') { gsap.to(fanObj, { rotation: -30, x: -20, duration: 0.1, yoyo: true, repeat: 1 }); } 
+            else { gsap.to(fanObj, { rotation: 30, x: 20, duration: 0.1, yoyo: true, repeat: 1 }); }
+            gsap.to(fanObj, { scale: 1.3, duration: 0.05, yoyo: true, repeat: 1 });
+        }
+
+        document.getElementById('btn-left').addEventListener('pointerdown', (e) => { e.preventDefault(); handleWaving('left'); });
+        document.getElementById('btn-right').addEventListener('pointerdown', (e) => { e.preventDefault(); handleWaving('right'); });
+
+        function startVelocityLogic() {
+            setInterval(() => {
+                if(flamesOut) return;
+                blowVelocity *= 0.88;
+                if(blowVelocity > 4.0) { 
+                    extinguishFlames(); 
+                } else if (blowVelocity > 1.0) {
+                    const lean = blowVelocity * 6;
+                    const shrink = 1 - (blowVelocity / 10);
+                    allFlames.forEach(f => {
+                        f.style.transform = `translateX(-50%) skewX(${lean}deg) scale(${shrink})`;
+                        f.style.opacity = "0.7";
+                    });
+                } else {
+                    allFlames.forEach(f => {
+                        f.style.transform = `translateX(-50%) scale(1)`;
+                        f.style.opacity = "1";
+                    });
+                }
+            }, 50);
+        }
+
+        function extinguishFlames() {
+            if(flamesOut) return;
+            flamesOut = true;
+
+            gsap.to(allFlames, { 
+                opacity: 0, scale: 0, y: -20, duration: 0.4, stagger: 0.05,
+                onComplete: () => {
+                    document.getElementById('cake-title').innerHTML = "Happiest 26th Birthday, <br>May you Smile forever!";
+                    document.getElementById('cake-title').style.color = "var(--accent-gold)";
+                    waveCtrls.style.display = 'none';
+                    gsap.to(fanObj, { opacity: 0, scale: 0, duration: 0.5 });
+                    triggerWinFireworks();
+                }
+            });
+        }
+
+        function triggerWinFireworks() {
+            let end = Date.now() + 5000;
+            (function frame() {
+                confetti({ particleCount: 7, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } });
+                confetti({ particleCount: 7, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+
+        fpBtn.addEventListener('pointerdown', startScan);
+        window.addEventListener('pointerup', stopScan);
+    </script>
+</body>
+</html>
